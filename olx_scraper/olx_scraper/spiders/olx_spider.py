@@ -181,12 +181,13 @@ class OlxSpider(scrapy.Spider):
                         self.scrapy_history.links_found += 1
                         if phone is not '':
                             phone = self.filter_mobile(phone)
-                            self.scrapy_history.numbers_found += 1
+                            
 
                             if not self.check_phone_number(phone):
                                 self.scrapy_history.numbers_non_matched += 1
                                 continue
 
+                            self.scrapy_history.numbers_found += 1
                             current_mobile_num += 1                            
                         else:
                             continue
@@ -289,9 +290,11 @@ class OlxSpider(scrapy.Spider):
                 self.update_or_remove_proxy(self.proxies[self.iterator_in_one_cycle])
                 continue
             except Exception as e:
+                self.update_or_remove_proxy(self.proxies[self.iterator_in_one_cycle])
                 print(str(e))
                 continue   
             except WebDriverException as e:
+                self.update_or_remove_proxy(self.proxies[self.iterator_in_one_cycle])
                 print(e)
                 continue
             except KeyboardInterrupt as e:

@@ -27,6 +27,7 @@ import httplib
 import schedule
 import threading
 from .my_thread import MyThread
+import signal
 
 sys.path.append(path.dirname(path.dirname(path.dirname(path.dirname(path.abspath(__file__))))))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "olx_site.settings")
@@ -123,7 +124,6 @@ class OlxSpider(scrapy.Spider):
                     content = etree.HTML(self.driver.page_source.encode('utf8'))
                     max_page_number = int(content.xpath('//*[@id="body-container"]/div[3]/div/div[4]/span[15]//span/text()')[0])
 
-                    print ('!!!!!!!!!!!!!!!!!!!! MAX NUMBER !!!!!!!!!!!!!!!!!!!!!')
                     # count the url
                     current_url_num = 0 
                     
@@ -135,7 +135,6 @@ class OlxSpider(scrapy.Spider):
 
 
                     while self.current_page <= max_page_number:
-                        print('!!!!!!!!!!!!!!!!!!! URL LIST !!!!!!!!!!!!!!!!!!!!!!!!')
                         print(self.url[1]+'&page='+str(self.current_page))
 
                         self.setup_proxy_check_xpath(self.url[1]+'&page='+str(self.current_page), '//table//tr[@class="wrap"]//a[contains(@class, "thumb")]/@href')
@@ -158,7 +157,6 @@ class OlxSpider(scrapy.Spider):
                                     phone_elem = self.driver.find_element_by_xpath('//*[@id="contact_methods"]/li[2]/div')
                                     phone_elem.click()
                                 except:
-                                    print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$4 not click")
                                     break
 
                                 time.sleep(3)
@@ -175,17 +173,18 @@ class OlxSpider(scrapy.Spider):
                                     print("++++++++++++++++++ phone empty ++++++++++++++")
 
                             ########## end while
+                            self.scrapy_history.links_found += 1
 
                             if phone is not '':
                                 phone = self.filter_mobile(phone)
+                                self.scrapy_history.numbers_found += 1
 
                                 if not self.check_phone_number(phone):
                                     self.scrapy_history.numbers_non_matched += 1
                                     continue
 
                                 current_mobile_num += 1
-                                self.scrapy_history.numbers_found += 1
-                                self.scrapy_history.numbers_unique = current_mobile_num
+                                
                                 ##? self.scrapy_history.numbers_unique
                             else:
                                 continue
@@ -213,8 +212,8 @@ class OlxSpider(scrapy.Spider):
                                     cycle_num += 1
                                     time.sleep(self.sleep_time)
 
-                                self.scrapy_history.links_found += 1
-                                self.scrapy_history.links_unique = current_url_num
+                                
+                                self.scrapy_history.links_unique += 1
                                 ##? self.scrapy_history.links_unique                    
 
                                 self.scrapy_history.save()
@@ -222,12 +221,12 @@ class OlxSpider(scrapy.Spider):
 
                                 self.total_count += 1
 
-                                print('======================================')
-                                print(address)
-                                print(phone)
-                                print(url)
-                                print(current_url_num)
-                                print('=========================================')
+                                # print('======================================')
+                                # print(address)
+                                # print(phone)
+                                # print(url)
+                                # print(current_url_num)
+                                # print('=========================================')
 
                         self.current_page += 1
                         self.scrapy_cycle_history.current_page = self.current_page
@@ -259,6 +258,9 @@ class OlxSpider(scrapy.Spider):
         update_proxy_thread.stop()
         update_proxy_thread.join()
 
+        signal.signal(signal.SIGINT, self.kill_threads)
+        signal.pause()
+
     def setup_proxy_check_xpath(self, url, xpath_string):
         """
             - Request with @url on webdriver using phantomJS for headless browser
@@ -268,9 +270,6 @@ class OlxSpider(scrapy.Spider):
                 Loop and request until webpage is full
         """
         while True:
-            print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
-            print(url)
-
             self.iterator_in_one_cycle = (self.iterator_in_one_cycle + 1) % len(self.proxies)
             proxy = self.proxies[self.iterator_in_one_cycle].proxy
             service_args=[]
@@ -337,6 +336,9 @@ class OlxSpider(scrapy.Spider):
 
             break
 
+    def kill_threads(self, signal, frame):
+        os._exit(1)
+
     def get_difference_days(self, old_date):
         """
             get different days with old date from today
@@ -380,8 +382,6 @@ class OlxSpider(scrapy.Spider):
         # check if international code 
         if str(phone).startswith(self.international_code):
             prefix = str(phone)[3:5]
-            print("%%%%%%%%%%%%%%%%%%% PREFIX %%%%%%%%%%%%%%%%")
-            print(prefix)
             if prefix in self.check_mobile_prefix:
                 return True
 
@@ -486,7 +486,6 @@ class OlxSpider(scrapy.Spider):
         """
             update active proxies per hour after checking online proxies from table.
         """
-        print("$$$$$$$$$$$$$$$$$$ Input thread $$$$$$$$$$$$$$$$$$$$$$$$$$")
         schedule.every().hour.do(self._update_active_proxies)
         while True:
             schedule.run_pending()
@@ -534,7 +533,7 @@ class OlxSpider(scrapy.Spider):
         if city and area and not district:
             logging.info('country:'+str(self.country_code) + ' city:' + str(city_name.encode('utf8')) + ' area:' + str(area_name.encode('utf8')) + ' district:' + str(district_name.encode('utf8')) + ' number:' + str(phone) + ' result' + '110')
 
-    def number_save_and_log(phone, city_id, area_id, district_id, city_name, area_name, district_name, result):
+    def number_save_and_log(self, phone, city_id, area_id, district_id, city_name, area_name, district_name, result):
         """
             Save valid row to mobbile_numbers database and Log
             @param:
@@ -551,6 +550,8 @@ class OlxSpider(scrapy.Spider):
         """
         try:
             MobileNumbers.objects.create(country_code=self.country_code, city_id=city_id, area_id=area_id, district_id=district_id, number=int(phone), postal_code_id=0)
+            self.scrapy_history.numbers_unique += 1
+            self.scrapy_history.save()
         except Exception as e:
             print(e)
         
