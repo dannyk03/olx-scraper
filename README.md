@@ -2,8 +2,7 @@
 
 #### Install python2.7
 #### Install project
-	git clone <repo>
-	pip install -r requirements.txt
+	git clone <repo>	
 
 #### Set source environment
 If you don't install vitualenv:
@@ -13,7 +12,26 @@ If you don't install vitualenv:
 	
 	source env/bin/activate
 
+	pip install -r requirements.txt
+
 #### Migrate the database:
+You should set the db name of your mysql server.
+So there is DATABASES variable  in olx-site/settings.py like this.
+	
+	DATABASES = {
+	    'default': {
+	        'ENGINE': 'django.db.backends.mysql',
+	        'NAME': '<db_name>',
+	        'USER': '<username>',
+	        'PASSWORD': '<password>',
+	        'HOST': '<hostname>',
+	    }
+	}
+
+You can set the db_name, username, password of your mysql database.
+and if mysql host is remote, hostname maybe would be host ip.
+but if localhost, you can set hostname with 'localhost'.
+
 	python manage.py makemigrations product
 	python manage.py migrate
 
