@@ -27,6 +27,7 @@ import httplib
 import schedule
 import threading
 from .my_thread import MyThread
+import signal
 
 sys.path.append(path.dirname(path.dirname(path.dirname(path.dirname(path.abspath(__file__))))))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "olx_site.settings")
@@ -96,16 +97,16 @@ class OlxSpider(scrapy.Spider):
             self.scrapy_history.active_proxies.append(len(self.proxies))
         self.scrapy_history.save()
 
-        update_proxy_thread = MyThread(name='child procs', target=self.update_active_proxies)
-        update_proxy_thread.start()
+        self.update_proxy_thread = MyThread(name='child procs', target=self.update_active_proxies)
+        self.update_proxy_thread.start()
 
         for key, url in enumerate(self.url):
             _thread = MyThread(name='category '+str(key+1), target=self.each_category_scrape, args=[url,key,])
             _thread.start()
             self.multi_threads.append(_thread)
 
-        # update_proxy_thread.stop()
-        # update_proxy_thread.join()
+        signal.signal(signal.SIGINT, self.kill_threads)
+        signal.pause()
 
     def each_category_scrape(self, category_url, category_index):
         scrapy_cycle_history = None
@@ -313,6 +314,16 @@ class OlxSpider(scrapy.Spider):
 
         return driver
 
+    def kill_threads(self, signal, frame):
+        os._exit(1)
+        for _thread in self.multi_threads:
+            _thread.stop()
+            _thread.join()
+
+        self.update_proxy_thread.stop()
+        self.update_proxy_thread.join()
+
+
     def get_difference_days(self, old_date):
         """
             get different days with old date from today
@@ -507,7 +518,7 @@ class OlxSpider(scrapy.Spider):
         if city and area and not district:
             logging.info('country:'+str(self.country_code) + ' city:' + str(city_name.encode('utf8')) + ' area:' + str(area_name.encode('utf8')) + ' district:' + str(district_name.encode('utf8')) + ' number:' + str(phone) + ' result' + '110')
 
-    def number_save_and_log(phone, city_id, area_id, district_id, city_name, area_name, district_name, result):
+    def number_save_and_log(self, phone, city_id, area_id, district_id, city_name, area_name, district_name, result):
         """
             Save valid row to mobbile_numbers database and Log
             @param:
