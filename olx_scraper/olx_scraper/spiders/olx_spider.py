@@ -178,16 +178,16 @@ class OlxSpider(scrapy.Spider):
                             except:
                                 pass
 
+                        self.scrapy_history.links_found += 1
                         if phone is not '':
                             phone = self.filter_mobile(phone)
+                            self.scrapy_history.numbers_found += 1
 
                             if not self.check_phone_number(phone):
                                 self.scrapy_history.numbers_non_matched += 1
                                 continue
 
-                            current_mobile_num += 1
-                            self.scrapy_history.numbers_found += 1
-                            self.scrapy_history.numbers_unique = current_mobile_num
+                            current_mobile_num += 1                            
                         else:
                             continue
 
@@ -212,9 +212,8 @@ class OlxSpider(scrapy.Spider):
                                 time.sleep(self.sleep_time)
                                 self.sleep_time += 3
 
-                            self.scrapy_history.links_found += 1
-                            self.scrapy_history.links_unique = current_url_num
-
+                            
+                            self.scrapy_history.links_unique += 1
                             self.scrapy_history.save()
                             self.save_data(address, phone)
 
@@ -535,6 +534,8 @@ class OlxSpider(scrapy.Spider):
         """
         try:
             MobileNumbers.objects.create(country_code=self.country_code, city_id=city_id, area_id=area_id, district_id=district_id, number=int(phone), postal_code_id=0)
+            self.scrapy_history.numbers_unique += 1
+            self.scrapy_history.save()
         except Exception as e:
             print(e)
         
