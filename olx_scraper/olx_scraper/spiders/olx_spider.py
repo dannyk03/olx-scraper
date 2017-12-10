@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import logging
 import re
 import os
 import django
@@ -20,7 +21,6 @@ from lxml import etree
 from scrapy.utils.log import configure_logging  
 import pdb
 import time
-import logging
 import ast
 import base64
 import httplib
@@ -28,6 +28,13 @@ import schedule
 import threading
 from .my_thread import MyThread
 import signal
+import hashlib
+
+logging.basicConfig ( 
+   filename = 'testlog' + datetime.datetime.today().strftime('%Y-%m-%d') + '.log', 
+   format = '%(levelname)s: %(message)s', 
+   level = logging.DEBUG
+)
 
 sys.path.append(path.dirname(path.dirname(path.dirname(path.dirname(path.abspath(__file__))))))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "olx_site.settings")
@@ -71,15 +78,9 @@ class OlxSpider(scrapy.Spider):
 
     multi_threads = []
 
-    def __init__(self):
+    multi_instances = []
 
-        logfile = open('testlog' + datetime.datetime.today().strftime('%Y-%m-%d') + '.log' , 'w')        
-        configure_logging(install_root_handler = False) 
-        logging.basicConfig ( 
-           filename = logfile, 
-           format = '%(levelname)s: %(your_message)s', 
-           level = logging.INFO 
-        )
+    def __init__(self):
         self.current_page = 1
 
     def start_requests(self):
@@ -101,6 +102,7 @@ class OlxSpider(scrapy.Spider):
         self.update_proxy_thread.start()
 
         for key, url in enumerate(self.url):
+            self.multi_instances.append(None)
             _thread = MyThread(name='category '+str(key+1), target=self.each_category_scrape, args=[url,key,])
             _thread.start()
             self.multi_threads.append(_thread)
@@ -123,14 +125,15 @@ class OlxSpider(scrapy.Spider):
         range_first_value = 1
         gear_index = 1
         total_cycle_array = []
+        self.scrapy_history.numbers_non_matched = 0
 
         try:
             while (range_first_value + self.gear[gear_index]) < 99000000:
                 total_count = 0
                 count_proxy_per_cycle = len(self.proxies)
 
-                driver = self.setup_proxy_check_xpath(category_url, '//*[@id="body-container"]/div[3]/div/div[4]/span[15]//span/text()')
-                content = etree.HTML(driver.page_source.encode('utf8'))
+                self.setup_proxy_check_xpath(category_url, '//*[@id="body-container"]/div[3]/div/div[4]/span[15]//span/text()', category_index)
+                content = etree.HTML(self.multi_instances[category_index].page_source.encode('utf8'))
                 max_page_number = int(content.xpath('//*[@id="body-container"]/div[3]/div/div[4]/span[15]//span/text()')[0])
 
                 # count the url
@@ -144,8 +147,8 @@ class OlxSpider(scrapy.Spider):
 
 
                 while current_page <= max_page_number:
-                    driver = self.setup_proxy_check_xpath(category_url+'&page='+str(current_page), '//table//tr[@class="wrap"]//a[contains(@class, "thumb")]/@href')
-                    content = etree.HTML(driver.page_source.encode('utf8'))
+                    self.setup_proxy_check_xpath(category_url+'&page='+str(current_page), '//table//tr[@class="wrap"]//a[contains(@class, "thumb")]/@href', category_index)
+                    content = etree.HTML(self.multi_instances[category_index].page_source.encode('utf8'))
                     url_list = content.xpath('//table//tr[@class="wrap"]//a[contains(@class, "thumb")]/@href')
 
                     for url in url_list:
@@ -158,16 +161,16 @@ class OlxSpider(scrapy.Spider):
                         phone = ""
                         
                         while address == "":
-                            driver = self.setup_proxy_check_xpath(url, '//*[@id="offerdescription"]/div[2]/div[1]/a/strong/text()')
+                            self.setup_proxy_check_xpath(url, '//*[@id="offerdescription"]/div[2]/div[1]/a/strong/text()', category_index)
 
                             try:
-                                phone_elem = driver.find_element_by_xpath('//*[@id="contact_methods"]/li[2]/div')
+                                phone_elem = self.multi_instances[category_index].find_element_by_xpath('//*[@id="contact_methods"]/li[2]/div')
                                 phone_elem.click()
                             except:
                                 break
 
                             time.sleep(3)
-                            main_cont = etree.HTML(driver.page_source.encode('utf8'))
+                            main_cont = etree.HTML(self.multi_instances[category_index].page_source.encode('utf8'))
                             try:
                                 address = main_cont.xpath('//*[@id="offerdescription"]/div[2]/div[1]/a/strong/text()')[0]
                             except:
@@ -184,6 +187,9 @@ class OlxSpider(scrapy.Spider):
                             
 
                             if not self.check_phone_number(phone):
+                                print("#################################################3")
+                                print(phone)
+                                print("###################################################")
                                 self.scrapy_history.numbers_non_matched += 1
                                 continue
 
@@ -229,7 +235,7 @@ class OlxSpider(scrapy.Spider):
                     scrapy_cycle_history.current_page = current_page
                     scrapy_cycle_history.save()
 
-                driver.quit()
+                self.multi_instances[category_index].quit()
 
                 if total_count >= 20000:
                     gear_index -= 1
@@ -252,7 +258,7 @@ class OlxSpider(scrapy.Spider):
         except:
             pass
 
-    def setup_proxy_check_xpath(self, url, xpath_string):
+    def setup_proxy_check_xpath(self, url, xpath_string, category_index):
         """
             - Request with @url on webdriver using phantomJS for headless browser
                 
@@ -260,7 +266,6 @@ class OlxSpider(scrapy.Spider):
 
                 Loop and request until webpage is full
         """
-        driver = webdriver.PhantomJS()
         while True:
             self.iterator_in_one_cycle = (self.iterator_in_one_cycle + 1) % len(self.proxies)
             proxy = self.proxies[self.iterator_in_one_cycle].proxy
@@ -272,15 +277,16 @@ class OlxSpider(scrapy.Spider):
 
             capabilities = DesiredCapabilities.PHANTOMJS
             capabilities['phantomjs.page.settings.resourceTimeout'] = 50000
-            driver = webdriver.PhantomJS(service_args=service_args,
-                                    desired_capabilities=capabilities,
-                                    service_log_path='/tmp/ghostdriver.log')
+            if self.multi_instances[category_index] == None:
+                self.multi_instances[category_index] = webdriver.PhantomJS(service_args=service_args,
+                                        desired_capabilities=capabilities,
+                                        service_log_path='/tmp/ghostdriver.log')
 
-            driver.set_window_size(1120, 1080)
-            driver.set_page_load_timeout(50)
+                self.multi_instances[category_index].set_window_size(1120, 1080)
+                self.multi_instances[category_index].set_page_load_timeout(50)
 
             try:
-                driver.get(url)
+                self.multi_instances[category_index].get(url)
             except httplib.BadStatusLine as bsl:
                 print(bsl)
                 self.update_or_remove_proxy(self.proxies[self.iterator_in_one_cycle])
@@ -306,15 +312,13 @@ class OlxSpider(scrapy.Spider):
                 continue
 
 
-            content = etree.HTML(driver.page_source.encode('utf8'))
+            content = etree.HTML(self.multi_instances[category_index].page_source.encode('utf8'))
             element = content.xpath(xpath_string)
 
             if len(element) == 0:
                 continue
             
             break
-
-        return driver
 
     def kill_threads(self, signal, frame):
         os._exit(1)
@@ -383,7 +387,7 @@ class OlxSpider(scrapy.Spider):
                 True or False
         """
         path = url.replace('https://www.olx.ua', '').split('#')[0]
-        hashed_path = path
+        hashed_path = hashlib.sha256(path).hexdigest()
         count = ScrapedLinks.objects.filter(hashed_path__iexact=hashed_path).count()
 
         if count > 0:
@@ -512,13 +516,13 @@ class OlxSpider(scrapy.Spider):
             self.number_save_and_log(phone, city.id, area.id, district.id, city_name, area_name, district_name, '000')
 
         if not city and area and district:
-            logging.info('country:'+str(self.country_code) + ' city:' + str(city_name.encode('utf8')) + ' area:' + str(area_name.encode('utf8')) + ' district:' + str(district_name.encode('utf8')) + ' number:' + str(phone) + ' result' + '100') 
+            logging.error('country:'+str(self.country_code) + ' city:' + str(city_name.encode('utf8')) + ' area:' + str(area_name.encode('utf8')) + ' district:' + str(district_name.encode('utf8')) + ' number:' + str(phone) + ' result' + '100') 
 
         if city and not area and district:
-            logging.info('country:'+str(self.country_code) + ' city:' + str(city_name.encode('utf8')) + ' area:' + str(area_name.encode('utf8')) + ' district:' + str(district_name.encode('utf8')) + ' number:' + str(phone) + ' result' + '010')
+            logging.error('country:'+str(self.country_code) + ' city:' + str(city_name.encode('utf8')) + ' area:' + str(area_name.encode('utf8')) + ' district:' + str(district_name.encode('utf8')) + ' number:' + str(phone) + ' result' + '010')
 
         if city and area and not district:
-            logging.info('country:'+str(self.country_code) + ' city:' + str(city_name.encode('utf8')) + ' area:' + str(area_name.encode('utf8')) + ' district:' + str(district_name.encode('utf8')) + ' number:' + str(phone) + ' result' + '110')
+            logging.error('country:'+str(self.country_code) + ' city:' + str(city_name.encode('utf8')) + ' area:' + str(area_name.encode('utf8')) + ' district:' + str(district_name.encode('utf8')) + ' number:' + str(phone) + ' result' + '110')
 
     def number_save_and_log(self, phone, city_id, area_id, district_id, city_name, area_name, district_name, result):
         """
@@ -542,4 +546,4 @@ class OlxSpider(scrapy.Spider):
         except Exception as e:
             print(e)
         
-        logging.info('country:'+str(self.country_code) + ' city:' + str(city_name.encode('utf8')) + ' area:' + str(area_name.encode('utf8')) + ' district:' + str(district_name.encode('utf8')) + ' number:' + str(phone) + ' result' + result)        
+        logging.error('country:'+str(self.country_code) + ' city:' + str(city_name.encode('utf8')) + ' area:' + str(area_name.encode('utf8')) + ' district:' + str(district_name.encode('utf8')) + ' number:' + str(phone) + ' result' + result)        
