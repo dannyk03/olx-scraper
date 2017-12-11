@@ -277,13 +277,13 @@ class OlxSpider(scrapy.Spider):
 
             capabilities = DesiredCapabilities.PHANTOMJS
             capabilities['phantomjs.page.settings.resourceTimeout'] = 50000
-            if self.multi_instances[category_index] == None:
-                self.multi_instances[category_index] = webdriver.PhantomJS(service_args=service_args,
-                                        desired_capabilities=capabilities,
-                                        service_log_path='/tmp/ghostdriver.log')
 
-                self.multi_instances[category_index].set_window_size(1120, 1080)
-                self.multi_instances[category_index].set_page_load_timeout(50)
+            self.multi_instances[category_index] = webdriver.PhantomJS(service_args=service_args,
+                                    desired_capabilities=capabilities,
+                                    service_log_path='/tmp/ghostdriver.log')
+
+            self.multi_instances[category_index].set_window_size(1120, 1080)
+            self.multi_instances[category_index].set_page_load_timeout(50)
 
             try:
                 self.multi_instances[category_index].get(url)
