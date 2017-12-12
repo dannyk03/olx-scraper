@@ -223,11 +223,6 @@ class OlxSpider(scrapy.Spider):
 
                             total_count += 1
 
-                            # print('======================================')
-                            # print(address)
-                            # print(phone)
-                            # print('=========================================')
-
                     current_page += 1
                     scrapy_cycle_history.current_page = current_page
                     scrapy_cycle_history.save()
@@ -545,7 +540,7 @@ class OlxSpider(scrapy.Spider):
         except Exception as e:
             self.scrapy_history.numbers_non_matched += 1
             print(e)
-            
+
         self.scrapy_history.save()
         logging.debug('############  country, city, area, district LOG ####################')
         logging.debug('country:'+str(self.country_code) + ' city:' + str(city_name.encode('utf8')) + ' area:' + str(area_name.encode('utf8')) + ' district:' + str(district_name.encode('utf8')) + ' number:' + str(phone) + ' result' + result)        
