@@ -495,9 +495,9 @@ class OlxSpider(scrapy.Spider):
         district_name = ''
 
         if len(address.split(',')) > 0:
-            city_name = address.split(',')[0].strip()
+            area_name = address.split(',')[0].strip()
         if len(address.split(',')) > 1:
-            area_name = address.split(',')[1].strip()
+            city_name = address.split(',')[1].strip()
         if len(address.split(',')) > 2:
             district_name = address.split(',')[2].strip()
 
@@ -506,9 +506,9 @@ class OlxSpider(scrapy.Spider):
         area = Areas.objects.filter(display_name__iexact=area_name)
         district = Districts.objects.filter(display_name__iexact=district_name)
 
-        if not city:
+        if not area:
             self.number_save_and_log(phone, None, None, None, city_name, area_name, district_name, '111')
-        elif not area:
+        elif not city:
             self.number_save_and_log(phone, city.id, None, None, city_name, area_name, district_name, '011')
         elif not district:
             self.number_save_and_log(phone, city.id, area.id, None, city_name, area_name, district_name, '001')
