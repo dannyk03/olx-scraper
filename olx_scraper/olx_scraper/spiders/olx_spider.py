@@ -80,6 +80,8 @@ class OlxSpider(scrapy.Spider):
 
     multi_instances = []
 
+    max_delay_limit = 10
+
     def __init__(self):
         self.current_page = 1
 
@@ -119,7 +121,6 @@ class OlxSpider(scrapy.Spider):
         except:
             scrapy_cycle_history = ScraypingCycleHistory.objects.create(scraper=self.domain, category_index=category_index, current_page=1, first_link='', last_link='', cycle_index=0)
 
-        # self.category_index = category_index
         current_page = scrapy_cycle_history.current_page
 
         range_first_value = 1
@@ -268,14 +269,14 @@ class OlxSpider(scrapy.Spider):
                 service_args.append('--proxy-auth={}:{}'.format(proxy.username, proxy.password))
 
             capabilities = DesiredCapabilities.PHANTOMJS
-            capabilities['phantomjs.page.settings.resourceTimeout'] = 50000
+            capabilities['phantomjs.page.settings.resourceTimeout'] = max_delay_limit * 1000
 
             self.multi_instances[category_index] = webdriver.PhantomJS(service_args=service_args,
                                     desired_capabilities=capabilities,
                                     service_log_path='/tmp/ghostdriver.log')
 
             self.multi_instances[category_index].set_window_size(1120, 1080)
-            self.multi_instances[category_index].set_page_load_timeout(50)
+            self.multi_instances[category_index].set_page_load_timeout(max_delay_limit)
 
             try:
                 self.multi_instances[category_index].get(url)
