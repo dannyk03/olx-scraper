@@ -269,14 +269,14 @@ class OlxSpider(scrapy.Spider):
                 service_args.append('--proxy-auth={}:{}'.format(proxy.username, proxy.password))
 
             capabilities = DesiredCapabilities.PHANTOMJS
-            capabilities['phantomjs.page.settings.resourceTimeout'] = max_delay_limit * 1000
+            capabilities['phantomjs.page.settings.resourceTimeout'] = self.max_delay_limit * 1000
 
             self.multi_instances[category_index] = webdriver.PhantomJS(service_args=service_args,
                                     desired_capabilities=capabilities,
                                     service_log_path='/tmp/ghostdriver.log')
 
             self.multi_instances[category_index].set_window_size(1120, 1080)
-            self.multi_instances[category_index].set_page_load_timeout(max_delay_limit)
+            self.multi_instances[category_index].set_page_load_timeout(self.max_delay_limit)
 
             try:
                 self.multi_instances[category_index].get(url)
