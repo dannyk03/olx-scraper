@@ -103,8 +103,9 @@ class OlxSpider(scrapy.Spider):
         self.update_proxy_thread = MyThread(name='child procs', target=self.update_active_proxies)
         self.update_proxy_thread.start()
 
+        self.create_instances()
+
         for key, url in enumerate(self.url):
-            self.multi_instances.append(None)
             _thread = MyThread(name='category '+str(key+1), target=self.each_category_scrape, args=[url,key,])
             _thread.start()
             self.multi_threads.append(_thread)
@@ -133,9 +134,8 @@ class OlxSpider(scrapy.Spider):
                 total_count = 0
                 count_proxy_per_cycle = len(self.proxies)
 
-                self.setup_proxy_check_xpath(category_url, '//*[@id="body-container"]/div[3]/div/div[4]/span[15]//span/text()', category_index)
-                content = etree.HTML(self.multi_instances[category_index].page_source.encode('utf8'))
-                max_page_number = int(content.xpath('//*[@id="body-container"]/div[3]/div/div[4]/span[15]//span/text()')[0])
+                content = self.setup_proxy_check_xpath(category_url, '//*[@id="body-container"]/div[3]/div/div[4]/span[15]//span/text()', category_index)
+                max_page_number = int(content[0].xpath('//*[@id="body-container"]/div[3]/div/div[4]/span[15]//span/text()')[0])
 
                 # count the url
                 current_url_num = 0 
@@ -148,9 +148,8 @@ class OlxSpider(scrapy.Spider):
 
 
                 while current_page <= max_page_number:
-                    self.setup_proxy_check_xpath(category_url+'&page='+str(current_page), '//table//tr[@class="wrap"]//a[contains(@class, "thumb")]/@href', category_index)
-                    content = etree.HTML(self.multi_instances[category_index].page_source.encode('utf8'))
-                    url_list = content.xpath('//table//tr[@class="wrap"]//a[contains(@class, "thumb")]/@href')
+                    content = self.setup_proxy_check_xpath(category_url+'&page='+str(current_page), '//table//tr[@class="wrap"]//a[contains(@class, "thumb")]/@href', category_index)
+                    url_list = content[0].xpath('//table//tr[@class="wrap"]//a[contains(@class, "thumb")]/@href')
 
                     for url in url_list:
                         if self.domain not in url:
@@ -162,23 +161,14 @@ class OlxSpider(scrapy.Spider):
                         phone = ""
                         
                         while address == "":
-                            self.setup_proxy_check_xpath(url, '//*[@id="offerdescription"]/div[2]/div[1]/a/strong/text()', category_index)
-
+                            content = self.setup_proxy_check_xpath(url, '//*[@id="offerdescription"]/div[2]/div[1]/a/strong/text()', category_index, True)
                             try:
-                                phone_elem = self.multi_instances[category_index].find_element_by_xpath('//*[@id="contact_methods"]/li[2]/div')
-                                phone_elem.click()
-                            except:
-                                break
-
-                            time.sleep(3)
-                            main_cont = etree.HTML(self.multi_instances[category_index].page_source.encode('utf8'))
-                            try:
-                                address = main_cont.xpath('//*[@id="offerdescription"]/div[2]/div[1]/a/strong/text()')[0]
+                                address = content[0].xpath('//*[@id="offerdescription"]/div[2]/div[1]/a/strong/text()')[0]
                             except:
                                 continue
 
                             try:
-                                phone = main_cont.xpath('//*[@id="contact_methods"]/li[2]/div/strong//text()')[0]
+                                phone = content[0].xpath('//*[@id="contact_methods"]/li[2]/div/strong//text()')[0]
                             except:
                                 pass
 
@@ -228,8 +218,6 @@ class OlxSpider(scrapy.Spider):
                     scrapy_cycle_history.current_page = current_page
                     scrapy_cycle_history.save()
 
-                self.multi_instances[category_index].quit()
-
                 if total_count >= 20000:
                     gear_index -= 1
                     if self.gear[gear_index] == 0:
@@ -251,17 +239,14 @@ class OlxSpider(scrapy.Spider):
         except:
             pass
 
-    def setup_proxy_check_xpath(self, url, xpath_string, category_index):
+    def create_instances(self):
         """
-            - Request with @url on webdriver using phantomJS for headless browser
-                
-            - confirm with @xpath_string if webpage is full-downloaded
+            Create the headless browser with given proxy list
+        """
+        del self.multi_instances[:]
 
-                Loop and request until webpage is full
-        """
-        while True:
-            self.iterator_in_one_cycle = (self.iterator_in_one_cycle + 1) % len(self.proxies)
-            proxy = self.proxies[self.iterator_in_one_cycle].proxy
+        for _proxy in self.proxies:
+            proxy = _proxy.proxy
             service_args=[]
             service_args.append('--proxy={}:{}'.format(proxy.ip, proxy.port))
 
@@ -271,47 +256,74 @@ class OlxSpider(scrapy.Spider):
             capabilities = DesiredCapabilities.PHANTOMJS
             capabilities['phantomjs.page.settings.resourceTimeout'] = self.max_delay_limit * 1000
 
-            self.multi_instances[category_index] = webdriver.PhantomJS(service_args=service_args,
+            driver = webdriver.PhantomJS(service_args=service_args,
                                     desired_capabilities=capabilities,
                                     service_log_path='/tmp/ghostdriver.log')
 
-            self.multi_instances[category_index].set_window_size(1120, 1080)
-            self.multi_instances[category_index].set_page_load_timeout(self.max_delay_limit)
+            driver.set_window_size(1120, 1080)
+            driver.set_page_load_timeout(self.max_delay_limit)
 
+            self.multi_instances.append(driver)
+
+
+
+    def setup_proxy_check_xpath(self, url, xpath_string, category_index, isPhone=False):
+        """
+            - Request with @url on webdriver using phantomJS for headless browser
+                
+            - confirm with @xpath_string if webpage is full-downloaded
+
+                Loop and request until webpage is full
+        """
+        content = None
+        while True:
+            iterator_in_one_cycle = (self.iterator_in_one_cycle + 1) % len(self.proxies)
+            self.iterator_in_one_cycle = iterator_in_one_cycle + 1
             try:
-                self.multi_instances[category_index].get(url)
+                self.multi_instances[iterator_in_one_cycle].get(url)
             except httplib.BadStatusLine as bsl:
                 print(bsl)
-                self.update_or_remove_proxy(self.proxies[self.iterator_in_one_cycle])
+                self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 continue
             except TimeoutException as e:
                 print(e)
-                self.update_or_remove_proxy(self.proxies[self.iterator_in_one_cycle])
+                self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 continue
             except Exception as e:
-                self.update_or_remove_proxy(self.proxies[self.iterator_in_one_cycle])
+                self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 print(str(e))
                 continue   
             except WebDriverException as e:
-                self.update_or_remove_proxy(self.proxies[self.iterator_in_one_cycle])
+                self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 print(e)
                 continue
             except KeyboardInterrupt as e:
                 print(e)
-                self.update_or_remove_proxy(self.proxies[self.iterator_in_one_cycle])
+                self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 continue
             except Exception as e:
                 print(e)
                 continue
 
 
-            content = etree.HTML(self.multi_instances[category_index].page_source.encode('utf8'))
+            content = etree.HTML(self.multi_instances[iterator_in_one_cycle].page_source.encode('utf8'))
             element = content.xpath(xpath_string)
 
             if len(element) == 0:
                 continue
             
+            if isPhone == True:
+                try:
+                    phone_elem = self.multi_instances[iterator_in_one_cycle].find_element_by_xpath('//*[@id="contact_methods"]/li[2]/div')
+                    phone_elem.click()
+                    time.sleep(2)
+                    content = etree.HTML(self.multi_instances[iterator_in_one_cycle].page_source.encode('utf8'))
+                except:
+                    pass
+                
             break
+
+        return content, iterator_in_one_cycle
 
     def kill_threads(self, signal, frame):
         os._exit(1)
@@ -437,6 +449,7 @@ class OlxSpider(scrapy.Spider):
             classified_proxy.save()
 
             self.proxies = self.get_or_create_proxies_for_website(self.website)
+            self.create_instances()
 
     def get_or_create_proxies_for_website(self, website):
         """
