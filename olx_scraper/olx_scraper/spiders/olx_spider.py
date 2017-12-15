@@ -326,6 +326,9 @@ class OlxSpider(scrapy.Spider):
         return content, iterator_in_one_cycle
 
     def kill_threads(self, signal, frame):
+        """
+            Kill main process and all thread when Control+C or project will be finished
+        """
         os._exit(1)
         for _thread in self.multi_threads:
             _thread.stop()
