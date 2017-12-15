@@ -503,22 +503,12 @@ class OlxSpider(scrapy.Spider):
         area_name = ''
         district_name = ''
 
-        print("address=====================================================")
-        print(address)
-
         if len(address.split(',')) > 0:
             area_name = address.split(',')[0].strip()
         if len(address.split(',')) > 1:
             city_name = address.split(',')[1].strip()
         if len(address.split(',')) > 2:
             district_name = address.split(',')[2].strip()
-
-        print("city=====================================================")
-        print(city_name)
-        print("area=====================================================")
-        print(area_name)
-        print("district=====================================================")
-        print(district_name)
 
         city = Cities.objects.filter(display_name__iexact=city_name).first()
         area = Areas.objects.filter(display_name__iexact=area_name).first()
