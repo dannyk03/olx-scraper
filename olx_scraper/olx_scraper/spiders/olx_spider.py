@@ -114,6 +114,14 @@ class OlxSpider(scrapy.Spider):
         signal.pause()
 
     def each_category_scrape(self, category_url, category_index):
+        """
+            spider for each category and for the purpose multi-threading.
+            @param:
+                category_url: category url to be scraped
+                category_index: index of category
+            @return:
+                Null
+        """
         scrapy_cycle_history = None
         try:
             scrapy_cycle_history = ScraypingCycleHistory.objects.filter(category_index=category_index).latest()
@@ -329,6 +337,7 @@ class OlxSpider(scrapy.Spider):
         """
             Kill main process and all thread when Control+C or project will be finished
         """
+
         os._exit(1)
         for _thread in self.multi_threads:
             _thread.stop()
