@@ -503,21 +503,37 @@ class OlxSpider(scrapy.Spider):
         area_name = ''
         district_name = ''
 
+        print("address=====================================================")
+        print(address)
+
         if len(address.split(',')) > 0:
-            city_name = address.split(',')[0].strip()
+            area_name = address.split(',')[0].strip()
         if len(address.split(',')) > 1:
-            area_name = address.split(',')[1].strip()
+            city_name = address.split(',')[1].strip()
         if len(address.split(',')) > 2:
             district_name = address.split(',')[2].strip()
 
+        print("city=====================================================")
+        print(city_name)
+        print("area=====================================================")
+        print(area_name)
+        print("district=====================================================")
+        print(district_name)
 
-        city = Cities.objects.filter(display_name__iexact=city_name)
-        area = Areas.objects.filter(display_name__iexact=area_name)
-        district = Districts.objects.filter(display_name__iexact=district_name)
+        city = Cities.objects.filter(display_name__iexact=city_name).first()
+        area = Areas.objects.filter(display_name__iexact=area_name).first()
+        district = Districts.objects.filter(display_name__iexact=district_name).first()
 
-        if not city:
+        print("city=====================================================")
+        print(city)
+        print("area=====================================================")
+        print(area)
+        print("district=====================================================")
+        print(district)
+
+        if not area:
             self.number_save_and_log(phone, None, None, None, city_name, area_name, district_name, '111')
-        elif not area:
+        elif not city:
             self.number_save_and_log(phone, city.id, None, None, city_name, area_name, district_name, '011')
         elif not district:
             self.number_save_and_log(phone, city.id, area.id, None, city_name, area_name, district_name, '001')
@@ -525,13 +541,16 @@ class OlxSpider(scrapy.Spider):
             self.number_save_and_log(phone, city.id, area.id, district.id, city_name, area_name, district_name, '000')
 
         if not city and area and district:
-            logging.info('country:'+str(self.country_code) + ' city:' + str(city_name.encode('utf8')) + ' area:' + str(area_name.encode('utf8')) + ' district:' + str(district_name.encode('utf8')) + ' number:' + str(phone) + ' result' + '100') 
+            logging.debug('############  country, city, area, district LOG ####################')
+            logging.debug('country:'+str(self.country_code) + ' city:' + str(city_name.encode('utf8')) + ' area:' + str(area_name.encode('utf8')) + ' district:' + str(district_name.encode('utf8')) + ' number:' + str(phone) + ' result' + ' 100') 
 
         if city and not area and district:
-            logging.info('country:'+str(self.country_code) + ' city:' + str(city_name.encode('utf8')) + ' area:' + str(area_name.encode('utf8')) + ' district:' + str(district_name.encode('utf8')) + ' number:' + str(phone) + ' result' + '010')
+            logging.debug('############  country, city, area, district LOG ####################')
+            logging.debug('country:'+str(self.country_code) + ' city:' + str(city_name.encode('utf8')) + ' area:' + str(area_name.encode('utf8')) + ' district:' + str(district_name.encode('utf8')) + ' number:' + str(phone) + ' result' + ' 010')
 
         if city and area and not district:
-            logging.info('country:'+str(self.country_code) + ' city:' + str(city_name.encode('utf8')) + ' area:' + str(area_name.encode('utf8')) + ' district:' + str(district_name.encode('utf8')) + ' number:' + str(phone) + ' result' + '110')
+            logging.debug('############  country, city, area, district LOG ####################')
+            logging.debug('country:'+str(self.country_code) + ' city:' + str(city_name.encode('utf8')) + ' area:' + str(area_name.encode('utf8')) + ' district:' + str(district_name.encode('utf8')) + ' number:' + str(phone) + ' result' + ' 110')
 
     def number_save_and_log(self, phone, city_id, area_id, district_id, city_name, area_name, district_name, result):
         """
@@ -552,7 +571,8 @@ class OlxSpider(scrapy.Spider):
             MobileNumbers.objects.create(country_code=self.country_code, city_id=city_id, area_id=area_id, district_id=district_id, number=int(phone), postal_code_id=0)
             self.scrapy_history.numbers_unique += 1
             self.scrapy_history.save()
+
         except Exception as e:
             print(e)
-        
+
         logging.info('country:'+str(self.country_code) + ' city:' + str(city_name.encode('utf8')) + ' area:' + str(area_name.encode('utf8')) + ' district:' + str(district_name.encode('utf8')) + ' number:' + str(phone) + ' result' + result)        
