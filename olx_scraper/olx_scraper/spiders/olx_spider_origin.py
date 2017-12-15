@@ -553,9 +553,10 @@ class OlxSpider(scrapy.Spider):
         try:
             MobileNumbers.objects.create(country_code=self.country_code, city_id=city_id, area_id=area_id, district_id=district_id, number=int(phone), postal_code_id=0)
             self.scrapy_history.numbers_unique += 1
-            self.scrapy_history.save()
-
         except Exception as e:
+            self.scrapy_history.numbers_non_matched += 1
             print(e)
+
+        self.scrapy_history.save()
 
         logging.info('country:'+str(self.country_code) + ' city:' + str(city_name.encode('utf8')) + ' area:' + str(area_name.encode('utf8')) + ' district:' + str(district_name.encode('utf8')) + ' number:' + str(phone) + ' result' + result)        
