@@ -475,6 +475,9 @@ class OlxSpider(scrapy.Spider):
         return ClassifiedWebsitesProxies.objects.filter(classified=website, status='online').all()
 
     def _update_active_proxies(self):
+        """
+            Update active proxies with new proxies or original proxy per hour
+        """
         proxies = self.get_or_create_proxies_for_website(self.website)
         del self.scrapy_history.active_proxies[0]
         self.scrapy_history.active_proxies.append(len(proxies))
