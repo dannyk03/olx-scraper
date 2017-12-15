@@ -88,10 +88,11 @@ class OlxSpider(scrapy.Spider):
     def start_requests(self):
         yield scrapy.Request('https://google.com',callback=self.parse)
 
+    
+    """
+        Main scraping module
+    """
     def parse(self, response):
-        """
-            Main scraping module
-        """
         self.website = ClassifiedWebsites.objects.filter(domain=self.domain).first()        
         self.proxies = self.get_or_create_proxies_for_website(self.website)        
         self.sleep_time = 7.5;
@@ -113,15 +114,15 @@ class OlxSpider(scrapy.Spider):
         signal.signal(signal.SIGINT, self.kill_threads)
         signal.pause()
 
+    """
+        spider for each category and for the purpose multi-threading.
+        @param:
+            category_url: category url to be scraped
+            category_index: index of category
+        @return:
+            Null
+    """
     def each_category_scrape(self, category_url, category_index):
-        """
-            spider for each category and for the purpose multi-threading.
-            @param:
-                category_url: category url to be scraped
-                category_index: index of category
-            @return:
-                Null
-        """
         scrapy_cycle_history = None
         try:
             scrapy_cycle_history = ScraypingCycleHistory.objects.filter(category_index=category_index).latest()
@@ -247,10 +248,10 @@ class OlxSpider(scrapy.Spider):
         except:
             pass
 
+    """
+        Create the headless browser with given proxy list
+    """
     def create_instances(self):
-        """
-            Create the headless browser with given proxy list
-        """
         del self.multi_instances[:]
 
         for _proxy in self.proxies:
@@ -273,16 +274,14 @@ class OlxSpider(scrapy.Spider):
 
             self.multi_instances.append(driver)
 
+    """
+        - Request with @url on webdriver using phantomJS for headless browser
+            
+        - confirm with @xpath_string if webpage is full-downloaded
 
-
+            Loop and request until webpage is full
+    """
     def setup_proxy_check_xpath(self, url, xpath_string, category_index, isPhone=False):
-        """
-            - Request with @url on webdriver using phantomJS for headless browser
-                
-            - confirm with @xpath_string if webpage is full-downloaded
-
-                Loop and request until webpage is full
-        """
         content = None
         while True:
             iterator_in_one_cycle = (self.iterator_in_one_cycle + 1) % len(self.proxies)
@@ -333,11 +332,10 @@ class OlxSpider(scrapy.Spider):
 
         return content, iterator_in_one_cycle
 
+    """
+        Kill main process and all thread when Control+C or project will be finished
+    """
     def kill_threads(self, signal, frame):
-        """
-            Kill main process and all thread when Control+C or project will be finished
-        """
-
         os._exit(1)
         for _thread in self.multi_threads:
             _thread.stop()
@@ -346,26 +344,25 @@ class OlxSpider(scrapy.Spider):
         self.update_proxy_thread.stop()
         self.update_proxy_thread.join()
 
-
+    """
+        get different days with old date from today
+        @param:
+            old_date: old date
+        @return:
+            different days
+    """
     def get_difference_days(self, old_date):
-        """
-            get different days with old date from today
-            @param:
-                old_date: old date
-            @return:
-                different days
-        """
         d1 = datetime.datetime.utcfromtimestamp(old_date.created_utc)
         result = datetime.datetime.utcnow() - d1
         return result.days
 
+    """
+        validating and fixing phone number
+        @param: 
+            num: phone number
+        @return: validated number
+    """
     def filter_mobile(self, num):
-        """
-            validating and fixing phone number
-            @param: 
-                num: phone number
-            @return: validated number
-        """
         if num == '':
             return 0
 
@@ -380,13 +377,13 @@ class OlxSpider(scrapy.Spider):
 
         return int(num)
 
+    """
+        check if given phone number has regular prefix
+        @param: 
+            phone: phone number
+        @return: True or False
+    """
     def check_phone_number(self, phone):
-        """
-            check if given phone number has regular prefix
-            @param: 
-                phone: phone number
-            @return: True or False
-        """
         # check if international code 
         if str(phone).startswith(self.international_code):
             prefix = str(phone)[3:5]
@@ -395,14 +392,14 @@ class OlxSpider(scrapy.Spider):
 
         return False
 
+    """
+        Check if url was already scraped
+        @param: 
+            url: ad full link
+        @return:
+            True or False
+    """
     def check_url_twice(self, url):
-        """
-            Check if url was already scraped
-            @param: 
-                url: ad full link
-            @return:
-                True or False
-        """
         path = url.replace('https://www.olx.ua', '').split('#')[0]
         hashed_path = hashlib.sha256(path).hexdigest()
         count = ScrapedLinks.objects.filter(hashed_path__iexact=hashed_path).count()
@@ -413,15 +410,15 @@ class OlxSpider(scrapy.Spider):
         ScrapedLinks.objects.create(scraper=self.domain, path=path, hashed_path=hashed_path)
         return False
 
-    def get_proxies(self, website):
-        """
-            Get valid proxies from Proxies table which are not status "suspended"
+    """
+        Get valid proxies from Proxies table which are not status "suspended"
 
-            @param: 
-                website: scraped domain
-            @return:
-                valid proxy list
-        """
+        @param: 
+            website: scraped domain
+        @return:
+            valid proxy list
+    """
+    def get_proxies(self, website):
         country_codes = website.proxy_countries
         country_codes = ast.literal_eval(country_codes)
 
@@ -443,17 +440,17 @@ class OlxSpider(scrapy.Spider):
 
         return proxies
 
-    def update_or_remove_proxy(self, classified_proxy):
-        """
-            Increase suspended_level once proxy is suspended
-            Update status, 'suspended' when level is more than 50 ( times )
-            At that time, refresh proxy list from table
+    """
+        Increase suspended_level once proxy is suspended
+        Update status, 'suspended' when level is more than 50 ( times )
+        At that time, refresh proxy list from table
 
-            @param:
-                classified_proxy: proxy which is suspended once.
-            @return:
-                Null
-        """
+        @param:
+            classified_proxy: proxy which is suspended once.
+        @return:
+            Null
+    """
+    def update_or_remove_proxy(self, classified_proxy):
         classified_proxy.suspended_level += 1
         classified_proxy.save()
         if classified_proxy.suspended_level >= 50:
@@ -463,17 +460,18 @@ class OlxSpider(scrapy.Spider):
             self.proxies = self.get_or_create_proxies_for_website(self.website)
             self.create_instances()
 
+
+    """
+        Insert proxy to classified_website_proxies table
+
+        return proxy list for scraped domain
+
+        @param: 
+            website: scrap domain
+        @return:
+            valid proxy list
+    """
     def get_or_create_proxies_for_website(self, website):
-        """
-            Insert proxy to classified_website_proxies table
-
-            return proxy list for scraped domain
-
-            @param: 
-                website: scrap domain
-            @return:
-                valid proxy list
-        """
         proxies = self.get_proxies(website)
         for proxy in proxies:
             try:
@@ -486,31 +484,31 @@ class OlxSpider(scrapy.Spider):
 
         return ClassifiedWebsitesProxies.objects.filter(classified=website, status='online').all()
 
+    """
+        Update active proxies with new proxies or original proxy per hour
+    """
     def _update_active_proxies(self):
-        """
-            Update active proxies with new proxies or original proxy per hour
-        """
         proxies = self.get_or_create_proxies_for_website(self.website)
         del self.scrapy_history.active_proxies[0]
         self.scrapy_history.active_proxies.append(len(proxies))
 
+    """
+        update active proxies per hour after checking online proxies from table.
+    """
     def update_active_proxies(self):
-        """
-            update active proxies per hour after checking online proxies from table.
-        """
         schedule.every().hour.do(self._update_active_proxies)
         while True:
             schedule.run_pending()
             time.sleep(1)        
 
+    """
+        Save address and phone and check result OUTPUT
+        @param:
+            address: scraped address
+        @return:
+            Null
+    """
     def save_data(self, address, phone):
-        """
-            Save address and phone and check result OUTPUT
-            @param:
-                address: scraped address
-            @return:
-                Null
-        """
         city_name = ''
         area_name = ''
         district_name = ''
@@ -548,21 +546,21 @@ class OlxSpider(scrapy.Spider):
             logging.debug('############  country, city, area, district LOG ####################')
             logging.debug('country:'+str(self.country_code) + ' city:' + str(city_name.encode('utf8')) + ' area:' + str(area_name.encode('utf8')) + ' district:' + str(district_name.encode('utf8')) + ' number:' + str(phone) + ' result' + ' 110')
 
-    def number_save_and_log(self, phone, city_id, area_id, district_id, city_name, area_name, district_name, result):
-        """
-            Save valid row to mobbile_numbers database and Log
-            @param:
-                city_id: id of cities table for current address
-                area_id: id of areas table for current address
-                district_id: id of districts table for current address
-                city_name: city name of current address
-                area_name: area name of current address
-                district_name: district name of current address
-                result: OUTPUT
+    """
+        Save valid row to mobbile_numbers database and Log
+        @param:
+            city_id: id of cities table for current address
+            area_id: id of areas table for current address
+            district_id: id of districts table for current address
+            city_name: city name of current address
+            area_name: area name of current address
+            district_name: district name of current address
+            result: OUTPUT
 
-            @return:
-                Null
-        """
+        @return:
+            Null
+    """
+    def number_save_and_log(self, phone, city_id, area_id, district_id, city_name, area_name, district_name, result):
         try:
             MobileNumbers.objects.create(country_code=self.country_code, city_id=city_id, area_id=area_id, district_id=district_id, number=int(phone), postal_code_id=0)
             self.scrapy_history.numbers_unique += 1
