@@ -158,6 +158,7 @@ class OlxSpider(scrapy.Spider):
 
                 while current_page <= max_page_number:
                     content = self.setup_proxy_check_xpath(category_url+'&page='+str(current_page), '//table//tr[@class="wrap"]//a[contains(@class, "thumb")]/@href', category_index)
+                    print("######################### page ##############################")
                     url_list = content[0].xpath('//table//tr[@class="wrap"]//a[contains(@class, "thumb")]/@href')
 
                     for url in url_list:
@@ -172,16 +173,23 @@ class OlxSpider(scrapy.Spider):
                         while address == "":
                             content = self.setup_proxy_check_xpath(url, '//*[@id="offerdescription"]/div[2]/div[1]/a/strong/text()', category_index, True)
                             try:
+                                print("$$$$$$$$$$$$$$$$$$$$$$$$4 address $$$$$$$$$$$$$$$$$$$$")
                                 address = content[0].xpath('//*[@id="offerdescription"]/div[2]/div[1]/a/strong/text()')[0]
                             except:
                                 continue
 
                             try:
+                                print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ phone ############################")
                                 phone = content[0].xpath('//*[@id="contact_methods"]/li[2]/div/strong//text()')[0]
                             except:
                                 pass
 
                         self.scrapy_history.links_found += 1
+                        print('############  url ####################')
+                        print(url) 
+                        logging.debug('############  url ####################')
+                        logging.debug(url) 
+
                         if phone is not '':
                             phone = self.filter_mobile(phone)
                             
@@ -289,26 +297,32 @@ class OlxSpider(scrapy.Spider):
             try:
                 self.multi_instances[iterator_in_one_cycle].get(url)
             except httplib.BadStatusLine as bsl:
+                print("555555555555555555555555555555555555")
                 print(bsl)
                 self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 continue
             except TimeoutException as e:
+                print("1111111111111111111111111111111111")
                 print(e)
                 self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 continue
             except Exception as e:
+                print("22222222222222222222222222222222222")
                 self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 print(str(e))
                 continue   
             except WebDriverException as e:
+                print("333333333333333333333333333333333")
                 self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 print(e)
                 continue
             except KeyboardInterrupt as e:
+                print("4444444444444444444444444444")
                 print(e)
                 self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 continue
             except Exception as e:
+                print("dDDDDDDDDDDDDDDDDDDDDDDDDDDD")
                 print(e)
                 continue
 
@@ -402,12 +416,12 @@ class OlxSpider(scrapy.Spider):
     def check_url_twice(self, url):
         path = url.replace('https://www.olx.ua', '').split('#')[0]
         hashed_path = hashlib.sha256(path).hexdigest()
-        count = ScrapedLinks.objects.filter(hashed_path__iexact=hashed_path).count()
+        count = ScrapedLinks.objects.filter(path__iexact=path).count()
 
         if count > 0:
             return True
 
-        ScrapedLinks.objects.create(scraper=self.domain, path=path, hashed_path=hashed_path)
+        ScrapedLinks.objects.create(scraper=self.domain, path=path, hashed_path=str(time.time()))
         return False
 
     """
