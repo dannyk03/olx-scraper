@@ -29,6 +29,7 @@ import threading
 from .my_thread import MyThread
 import signal
 import hashlib
+import multiprocessing
 
 logging.basicConfig ( 
    filename = 'testlog' + datetime.datetime.today().strftime('%Y-%m-%d') + '.log', 
@@ -43,28 +44,31 @@ django.setup()
 from product.models import *
 from product.views import *
 
+def process_scrape(arg, **kwarg):
+    return OlxSpider.each_category_scrape(*arg, **kwarg)
+
 class OlxSpider(scrapy.Spider):
     name = "olx"
 
     url = [
         'https://www.olx.ua/detskiy-mir/?search%5Bprivate_business%5D=private',
         'https://www.olx.ua/nedvizhimost/?search%5Bprivate_business%5D=private',
-        'https://www.olx.ua/transport/?search%5Bprivate_business%5D=private',
-        'https://www.olx.ua/zhivotnye/?search%5Bprivate_business%5D=private',
-        'https://www.olx.ua/dom-i-sad/?search%5Bprivate_business%5D=private',
-        'https://www.olx.ua/elektronika/?search%5Bprivate_business%5D=private',
-        'https://www.olx.ua/uslugi/?search%5Bprivate_business%5D=private',
-        'https://www.olx.ua/moda-i-stil/?search%5Bprivate_business%5D=private',
-        'https://www.olx.ua/hobbi-otdyh-i-sport/?search%5Bprivate_business%5D=private',
-        'https://www.olx.ua/otdam-darom/?search%5Bfilter_float_price%3Afrom%5D=free&search%5Bprivate_business%5D=private',
-        'https://www.olx.ua/obmen-barter/?search%5Bfilter_float_price%3Afrom%5D=exchange&search%5Bprivate_business%5D=private'
+        # 'https://www.olx.ua/transport/?search%5Bprivate_business%5D=private',
+        # 'https://www.olx.ua/zhivotnye/?search%5Bprivate_business%5D=private',
+        # 'https://www.olx.ua/dom-i-sad/?search%5Bprivate_business%5D=private',
+        # 'https://www.olx.ua/elektronika/?search%5Bprivate_business%5D=private',
+        # 'https://www.olx.ua/uslugi/?search%5Bprivate_business%5D=private',
+        # 'https://www.olx.ua/moda-i-stil/?search%5Bprivate_business%5D=private',
+        # 'https://www.olx.ua/hobbi-otdyh-i-sport/?search%5Bprivate_business%5D=private',
+        # 'https://www.olx.ua/otdam-darom/?search%5Bfilter_float_price%3Afrom%5D=free&search%5Bprivate_business%5D=private',
+        # 'https://www.olx.ua/obmen-barter/?search%5Bfilter_float_price%3Afrom%5D=exchange&search%5Bprivate_business%5D=private'
     ]
 
     domain = "olx.ua"
 
     country_code = 'UA'
 
-    check_mobile_prefix = ['39', '38', '50', '63', '66', '67', '68', '91', '92', '93', '94', '95', '96', '97', '98', '99']
+    check_mobile_prefix = ['39', '38','44', '45', '32', '48' ,'50', '63', '66', '67', '68','73', '91', '92', '93', '94', '95', '96', '97', '98', '99']
 
     international_code = '380'
 
@@ -85,6 +89,12 @@ class OlxSpider(scrapy.Spider):
     def __init__(self):
         self.current_page = 1
 
+    def __del__(self):
+        print "... Destructor"
+
+    def __call__(self, url, index):
+        self.each_category_scrape(url, index)
+
     def start_requests(self):
         yield scrapy.Request('https://google.com',callback=self.parse)
 
@@ -97,7 +107,7 @@ class OlxSpider(scrapy.Spider):
         self.proxies = self.get_or_create_proxies_for_website(self.website)        
         self.sleep_time = 7.5;
         self.scrapy_history = ScrapingHistory.objects.create(scraper=self.domain, links_found=0, links_unique=0, numbers_found=0, numbers_unique=0, numbers_non_matched=0, active_proxies=[], sleep_time=self.sleep_time)
-        for i in range(0, len(self.proxies)):
+        for i in range(0, 24):
             self.scrapy_history.active_proxies.append(len(self.proxies))
         self.scrapy_history.save()
 
@@ -106,6 +116,21 @@ class OlxSpider(scrapy.Spider):
 
         self.create_instances()
 
+        task = []
+
+        for key, url in enumerate(self.url):
+            task.append((url, key, ))
+
+        # pool = multiprocessing.Pool(len(self.url))
+        # async_results = [pool.apply_async(self.each_category_scrape, t) for t in task]
+        # pool.close()
+        # map(multiprocessing.pool.ApplyResult.wait, async_results)
+
+        # pool.map(process_scrape, zip([self]*len(task), task))
+
+        # for t in task:
+        #     self.multi_threads.append(pool.apply_async(self.each_category_scrape, t))
+        
         for key, url in enumerate(self.url):
             _thread = MyThread(name='category '+str(key+1), target=self.each_category_scrape, args=[url,key,])
             _thread.start()
@@ -123,6 +148,7 @@ class OlxSpider(scrapy.Spider):
             Null
     """
     def each_category_scrape(self, category_url, category_index):
+        print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
         scrapy_cycle_history = None
         try:
             scrapy_cycle_history = ScraypingCycleHistory.objects.filter(category_index=category_index).latest()
@@ -142,7 +168,7 @@ class OlxSpider(scrapy.Spider):
             while (range_first_value + self.gear[gear_index]) < 99000000:
                 total_count = 0
                 count_proxy_per_cycle = len(self.proxies)
-
+                it_cycle = 0
                 content = self.setup_proxy_check_xpath(category_url, '//*[@id="body-container"]/div[3]/div/div[4]/span[15]//span/text()', category_index)
                 max_page_number = int(content[0].xpath('//*[@id="body-container"]/div[3]/div/div[4]/span[15]//span/text()')[0])
 
@@ -158,7 +184,6 @@ class OlxSpider(scrapy.Spider):
 
                 while current_page <= max_page_number:
                     content = self.setup_proxy_check_xpath(category_url+'&page='+str(current_page), '//table//tr[@class="wrap"]//a[contains(@class, "thumb")]/@href', category_index)
-                    print("######################### page ##############################")
                     url_list = content[0].xpath('//table//tr[@class="wrap"]//a[contains(@class, "thumb")]/@href')
 
                     for url in url_list:
@@ -173,26 +198,17 @@ class OlxSpider(scrapy.Spider):
                         while address == "":
                             content = self.setup_proxy_check_xpath(url, '//*[@id="offerdescription"]/div[2]/div[1]/a/strong/text()', category_index, True)
                             try:
-                                print("$$$$$$$$$$$$$$$$$$$$$$$$4 address $$$$$$$$$$$$$$$$$$$$")
                                 address = content[0].xpath('//*[@id="offerdescription"]/div[2]/div[1]/a/strong/text()')[0]
                             except:
                                 continue
 
                             try:
-                                print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ phone ############################")
                                 phone = content[0].xpath('//*[@id="contact_methods"]/li[2]/div/strong//text()')[0]
                             except:
                                 pass
 
-                        self.scrapy_history.links_found += 1
-                        print('############  url ####################')
-                        print(url) 
-                        logging.debug('############  url ####################')
-                        logging.debug(url) 
-
                         if phone is not '':
                             phone = self.filter_mobile(phone)
-                            
 
                             if not self.check_phone_number(phone):
                                 self.scrapy_history.numbers_non_matched += 1
@@ -203,6 +219,7 @@ class OlxSpider(scrapy.Spider):
                         else:
                             continue
 
+                        self.scrapy_history.links_found += 1
                         if address is not '':
                             current_url_num += 1
                             scrapy_cycle_history.cycle_index = cycle_num
@@ -216,11 +233,12 @@ class OlxSpider(scrapy.Spider):
                                 scrapy_cycle_history.first_link = total_cycle_array[cycle_num][0]
 
                             scrapy_cycle_history.save()
-                                
-                            it_cycle = self.iterator_in_one_cycle % count_proxy_per_cycle
+                            
+                            it_cycle += 1
 
                             if it_cycle == count_proxy_per_cycle - 1:
                                 cycle_num += 1
+                                it_cycle = 0
                                 time.sleep(self.sleep_time)
                                 self.sleep_time += 3
 
@@ -251,8 +269,9 @@ class OlxSpider(scrapy.Spider):
             self.each_category_scrape(category_url, category_index)
             return
         try:
-            self.multi_threads[category_index].stop()
-            self.multi_threads[category_index].join()
+            print("d")
+            # self.multi_threads[category_index].stop()
+            # self.multi_threads[category_index].join()
         except:
             pass
 
@@ -292,37 +311,31 @@ class OlxSpider(scrapy.Spider):
     def setup_proxy_check_xpath(self, url, xpath_string, category_index, isPhone=False):
         content = None
         while True:
-            iterator_in_one_cycle = (self.iterator_in_one_cycle + 1) % len(self.proxies)
+            iterator_in_one_cycle = (self.iterator_in_one_cycle + 1) % len(self.multi_instances)
             self.iterator_in_one_cycle = iterator_in_one_cycle + 1
             try:
                 self.multi_instances[iterator_in_one_cycle].get(url)
             except httplib.BadStatusLine as bsl:
-                print("555555555555555555555555555555555555")
                 print(bsl)
                 self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 continue
             except TimeoutException as e:
-                print("1111111111111111111111111111111111")
                 print(e)
                 self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 continue
             except Exception as e:
-                print("22222222222222222222222222222222222")
                 self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 print(str(e))
                 continue   
             except WebDriverException as e:
-                print("333333333333333333333333333333333")
                 self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 print(e)
                 continue
             except KeyboardInterrupt as e:
-                print("4444444444444444444444444444")
                 print(e)
                 self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 continue
             except Exception as e:
-                print("dDDDDDDDDDDDDDDDDDDDDDDDDDDD")
                 print(e)
                 continue
 
@@ -337,7 +350,7 @@ class OlxSpider(scrapy.Spider):
                 try:
                     phone_elem = self.multi_instances[iterator_in_one_cycle].find_element_by_xpath('//*[@id="contact_methods"]/li[2]/div')
                     phone_elem.click()
-                    time.sleep(2)
+                    time.sleep(3)
                     content = etree.HTML(self.multi_instances[iterator_in_one_cycle].page_source.encode('utf8'))
                 except:
                     pass
@@ -351,9 +364,9 @@ class OlxSpider(scrapy.Spider):
     """
     def kill_threads(self, signal, frame):
         os._exit(1)
-        for _thread in self.multi_threads:
-            _thread.stop()
-            _thread.join()
+        # for _thread in self.multi_threads:
+        #     _thread.stop()
+        #     _thread.join()
 
         self.update_proxy_thread.stop()
         self.update_proxy_thread.join()
@@ -399,6 +412,8 @@ class OlxSpider(scrapy.Spider):
     """
     def check_phone_number(self, phone):
         # check if international code 
+        print("$$$$$$$$$$$$$$$$$$$$$$$$$$4 phone $$$$$$$$$$$$$$$$$$$$$$$$$$")
+        print(phone)
         if str(phone).startswith(self.international_code):
             prefix = str(phone)[3:5]
             if prefix in self.check_mobile_prefix:
@@ -449,6 +464,10 @@ class OlxSpider(scrapy.Spider):
 
             proxies.append(proxy)
 
+        if len(proxies) == 0:
+            print("proxies are unavailable!")
+            self.kill_threads(None, None)
+
         if len(proxies) > website.max_proxies:
             proxies = proxies[:website.max_proxies]
 
@@ -470,7 +489,6 @@ class OlxSpider(scrapy.Spider):
         if classified_proxy.suspended_level >= 50:
             classified_proxy.status = 'suspended'
             classified_proxy.save()
-
             self.proxies = self.get_or_create_proxies_for_website(self.website)
             self.create_instances()
 
@@ -505,6 +523,7 @@ class OlxSpider(scrapy.Spider):
         proxies = self.get_or_create_proxies_for_website(self.website)
         del self.scrapy_history.active_proxies[0]
         self.scrapy_history.active_proxies.append(len(proxies))
+        self.scrapy_history.save()
 
     """
         update active proxies per hour after checking online proxies from table.
