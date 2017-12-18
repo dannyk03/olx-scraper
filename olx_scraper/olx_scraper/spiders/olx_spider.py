@@ -44,9 +44,6 @@ django.setup()
 from product.models import *
 from product.views import *
 
-def process_scrape(arg, **kwarg):
-    return OlxSpider.each_category_scrape(*arg, **kwarg)
-
 class OlxSpider(scrapy.Spider):
     name = "olx"
 
@@ -89,16 +86,9 @@ class OlxSpider(scrapy.Spider):
     def __init__(self):
         self.current_page = 1
 
-    def __del__(self):
-        print "... Destructor"
-
-    def __call__(self, url, index):
-        self.each_category_scrape(url, index)
-
     def start_requests(self):
         yield scrapy.Request('https://google.com',callback=self.parse)
 
-    
     """
         Main scraping module
     """
@@ -187,6 +177,7 @@ class OlxSpider(scrapy.Spider):
                     url_list = content[0].xpath('//table//tr[@class="wrap"]//a[contains(@class, "thumb")]/@href')
 
                     for url in url_list:
+                        start = time.clock()
                         if self.domain not in url:
                             continue                
                         if self.check_url_twice(url):
@@ -246,6 +237,10 @@ class OlxSpider(scrapy.Spider):
                             self.scrapy_history.links_unique += 1
                             self.scrapy_history.save()
                             self.save_data(address, phone)
+                            print("######################### time line per url ######################")
+                            print time.clock() - start
+                            logging.debug("######################### time line per url ######################")
+                            logging.debug(str(time.clock() - start))
 
                             total_count += 1
 
@@ -269,9 +264,8 @@ class OlxSpider(scrapy.Spider):
             self.each_category_scrape(category_url, category_index)
             return
         try:
-            print("d")
-            # self.multi_threads[category_index].stop()
-            # self.multi_threads[category_index].join()
+            self.multi_threads[category_index].stop()
+            self.multi_threads[category_index].join()
         except:
             pass
 
