@@ -49,15 +49,15 @@ class OlxSpider(scrapy.Spider):
     url = [
         'https://www.olx.ua/detskiy-mir/?search%5Bprivate_business%5D=private',
         'https://www.olx.ua/nedvizhimost/?search%5Bprivate_business%5D=private',
-        # 'https://www.olx.ua/transport/?search%5Bprivate_business%5D=private',
-        # 'https://www.olx.ua/zhivotnye/?search%5Bprivate_business%5D=private',
-        # 'https://www.olx.ua/dom-i-sad/?search%5Bprivate_business%5D=private',
-        # 'https://www.olx.ua/elektronika/?search%5Bprivate_business%5D=private',
-        # 'https://www.olx.ua/uslugi/?search%5Bprivate_business%5D=private',
-        # 'https://www.olx.ua/moda-i-stil/?search%5Bprivate_business%5D=private',
-        # 'https://www.olx.ua/hobbi-otdyh-i-sport/?search%5Bprivate_business%5D=private',
-        # 'https://www.olx.ua/otdam-darom/?search%5Bfilter_float_price%3Afrom%5D=free&search%5Bprivate_business%5D=private',
-        # 'https://www.olx.ua/obmen-barter/?search%5Bfilter_float_price%3Afrom%5D=exchange&search%5Bprivate_business%5D=private'
+        'https://www.olx.ua/transport/?search%5Bprivate_business%5D=private',
+        'https://www.olx.ua/zhivotnye/?search%5Bprivate_business%5D=private',
+        'https://www.olx.ua/dom-i-sad/?search%5Bprivate_business%5D=private',
+        'https://www.olx.ua/elektronika/?search%5Bprivate_business%5D=private',
+        'https://www.olx.ua/uslugi/?search%5Bprivate_business%5D=private',
+        'https://www.olx.ua/moda-i-stil/?search%5Bprivate_business%5D=private',
+        'https://www.olx.ua/hobbi-otdyh-i-sport/?search%5Bprivate_business%5D=private',
+        'https://www.olx.ua/otdam-darom/?search%5Bfilter_float_price%3Afrom%5D=free&search%5Bprivate_business%5D=private',
+        'https://www.olx.ua/obmen-barter/?search%5Bfilter_float_price%3Afrom%5D=exchange&search%5Bprivate_business%5D=private'
     ]
 
     domain = "olx.ua"
