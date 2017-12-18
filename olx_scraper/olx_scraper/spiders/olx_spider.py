@@ -33,8 +33,7 @@ import multiprocessing
 
 logging.basicConfig ( 
    filename = 'testlog' + datetime.datetime.today().strftime('%Y-%m-%d') + '.log', 
-   format = '%(levelname)s: %(message)s', 
-   level = logging.DEBUG
+   format = '%(levelname)s: %(message)s'
 )
 
 sys.path.append(path.dirname(path.dirname(path.dirname(path.dirname(path.abspath(__file__))))))
@@ -260,6 +259,7 @@ class OlxSpider(scrapy.Spider):
 
         except Exception as err:
             print(err)
+            loggin.debug(err)
             time.sleep(60)
             self.each_category_scrape(category_url, category_index)
             return
@@ -311,27 +311,29 @@ class OlxSpider(scrapy.Spider):
                 self.multi_instances[iterator_in_one_cycle].get(url)
             except httplib.BadStatusLine as bsl:
                 print(bsl)
+                logging.debug(bsl)
                 self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 continue
             except TimeoutException as e:
                 print(e)
+                logging.debug(e)
                 self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 continue
-            except Exception as e:
-                self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
-                print(str(e))
-                continue   
             except WebDriverException as e:
                 self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 print(e)
+                logging.debug(e)
                 continue
             except KeyboardInterrupt as e:
                 print(e)
+                logging.debug(e)
                 self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
-                continue
+                continue            
             except Exception as e:
-                print(e)
-                continue
+                self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
+                print(str(e))
+                logging.debug(e)
+                continue   
 
 
             content = etree.HTML(self.multi_instances[iterator_in_one_cycle].page_source.encode('utf8'))
@@ -594,6 +596,7 @@ class OlxSpider(scrapy.Spider):
         except Exception as e:
             self.scrapy_history.numbers_non_matched += 1
             print(e)
+            logging.debug(e)
 
         self.scrapy_history.save()
         logging.debug('############  country, city, area, district LOG ####################')
