@@ -178,8 +178,10 @@ class OlxSpider(scrapy.Spider):
                     for url in url_list:
                         start = time.clock()
                         if self.domain not in url:
+                            logging.debug(str("$$$$$$$$$$$$$$$$$ url is not valid $#$$$$$$$$$$$$$$$$$$$$$")
                             continue                
                         if self.check_url_twice(url):
+                            logging.debug("$$$$$$$$$$$$$$ phone number is not VALID $$$$$$$$$$$$$$$$$")
                             continue                
 
                         address = ""
@@ -190,6 +192,7 @@ class OlxSpider(scrapy.Spider):
                             try:
                                 address = content[0].xpath('//*[@id="offerdescription"]/div[2]/div[1]/a/strong/text()')[0]
                             except:
+                                logging.debug("########## address is not available ##########")
                                 continue
 
                             try:
@@ -202,11 +205,13 @@ class OlxSpider(scrapy.Spider):
 
                             if not self.check_phone_number(phone):
                                 self.scrapy_history.numbers_non_matched += 1
+                                logging.debug("############# Non matched ###############")
                                 continue
 
                             self.scrapy_history.numbers_found += 1
                             current_mobile_num += 1                            
                         else:
+                            logging.debug("$$$$$$$$$$$ phone number is not available $$$$$$$$$$$$$$$$$$$$")
                             continue
 
                         self.scrapy_history.links_found += 1
@@ -250,6 +255,7 @@ class OlxSpider(scrapy.Spider):
                 if total_count >= 20000:
                     gear_index -= 1
                     if self.gear[gear_index] == 0:
+                        logging.debug("$$$$$$$$$$$$$$$$ gear index is finisihed ##$$$$$$$$")
                         break
 
                 if total_count  <= 2000:
@@ -408,8 +414,6 @@ class OlxSpider(scrapy.Spider):
     """
     def check_phone_number(self, phone):
         # check if international code 
-        print("$$$$$$$$$$$$$$$$$$$$$$$$$$4 phone $$$$$$$$$$$$$$$$$$$$$$$$$$")
-        print(phone)
         if str(phone).startswith(self.international_code):
             prefix = str(phone)[3:5]
             if prefix in self.check_mobile_prefix:
@@ -508,7 +512,8 @@ class OlxSpider(scrapy.Spider):
                 
                 ClassifiedWebsitesProxies.objects.create(classified=website, proxy=proxy, suspended_level=0, status='online')
             except Exception as ex:
-                print(ex);
+                print(ex)
+                logging.debug(ex)
 
         return ClassifiedWebsitesProxies.objects.filter(classified=website, status='online').all()
 
