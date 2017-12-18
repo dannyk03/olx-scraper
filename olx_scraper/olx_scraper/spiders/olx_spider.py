@@ -178,7 +178,7 @@ class OlxSpider(scrapy.Spider):
                     for url in url_list:
                         start = time.clock()
                         if self.domain not in url:
-                            logging.debug(str("$$$$$$$$$$$$$$$$$ url is not valid $#$$$$$$$$$$$$$$$$$$$$$")
+                            logging.debug("$$$$$$$$$$$$$$$$$ url is not valid $#$$$$$$$$$$$$$$$$$$$$$")
                             continue                
                         if self.check_url_twice(url):
                             logging.debug("$$$$$$$$$$$$$$ phone number is not VALID $$$$$$$$$$$$$$$$$")
