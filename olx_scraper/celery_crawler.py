@@ -2,7 +2,7 @@
 
 # from scrapy.utils.project import get_project_settings
 # from scrapy.crawler import CrawlerProcess
-from olx_scraper.spiders.olx_spider import OlxSpider
+from olx_scraper.spiders.olx_spider_2 import OlxSpider
 # import multiprocessing as mp
 
 # def scrape_module(queue):
