@@ -200,12 +200,15 @@ class OlxSpider(scrapy.Spider):
                             except:
                                 pass
 
+                        self.scrapy_history.links_found += 1
+
                         if phone is not '':
                             phone = self.filter_mobile(phone)
 
                             if not self.check_phone_number(phone):
                                 self.scrapy_history.numbers_non_matched += 1
                                 logging.debug("############# Non matched ###############")
+                                logging.debug(phone)
                                 continue
 
                             self.scrapy_history.numbers_found += 1
@@ -214,7 +217,7 @@ class OlxSpider(scrapy.Spider):
                             logging.debug("$$$$$$$$$$$ phone number is not available $$$$$$$$$$$$$$$$$$$$")
                             continue
 
-                        self.scrapy_history.links_found += 1
+                        
                         if address is not '':
                             current_url_num += 1
                             scrapy_cycle_history.cycle_index = cycle_num
@@ -265,7 +268,7 @@ class OlxSpider(scrapy.Spider):
 
         except Exception as err:
             print(err)
-            loggin.debug(err)
+            logging.debug(err)
             time.sleep(60)
             self.each_category_scrape(category_url, category_index)
             return

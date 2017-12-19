@@ -1,13 +1,29 @@
-import pathos.pools as pp
-class someClass(object):
-    def __init__(self):
-        pass
-    def f(self, x):
-        return x*x
-    def go(self):
-        pool = pp.ProcessPool(4)
-        print pool.map(self.f, range(10))
+def main_1():
+	global a
+	global b
+	global c
+
+	print a, b, c
+	a += 10
+
+def main_2():
+	global a
+	global b
+	global c
+	
+	print a
+	b += 29
+
+def main():
+	global a
+	global b
+	global c
+
+	a = 14
+	b = 12
+	c = 11
+	main_1()
+	main_2()
 
 if __name__=="__main__":
-	s=someClass()
-	s.go()
+	main()
