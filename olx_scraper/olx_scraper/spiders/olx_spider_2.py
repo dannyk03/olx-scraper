@@ -192,8 +192,10 @@ def each_category_scrape(category_url, category_index):
                     if domain not in url:
                         logging.debug("$$$$$$$$$$$$$$$$$ url is not valid $#$$$$$$$$$$$$$$$$$$$$$")
                         continue                
+
+                    self_scrapy_history.links_found += 1
                     if check_url_twice(url):
-                        logging.debug("$$$$$$$$$$$$$$ phone number is not VALID $$$$$$$$$$$$$$$$$")
+                        logging.debug("$$$$$$$$$$$$$$ url is twice repeated $$$$$$$$$$$$$$$$$")
                         continue                
 
                     address = ""
@@ -212,15 +214,14 @@ def each_category_scrape(category_url, category_index):
                         except:
                             pass
 
-                    self_scrapy_history.links_found += 1
+                    
 
                     if phone is not '':
                         phone = filter_mobile(phone)
 
                         if not check_phone_number(phone):
                             self_scrapy_history.numbers_non_matched += 1
-                            logging.debug("############# Non matched ###############")
-                            logging.debug(phone)
+                            logging.debug("############# Non matched ###############" + str(phone))
                             continue
 
                         self_scrapy_history.numbers_found += 1
@@ -460,7 +461,7 @@ def check_phone_number(phone):
         True or False
 """
 def check_url_twice(url):
-    path = url.replace('https://www.olx.ua', '').split('#')[0]
+    path = url.replace('https://www.olx.ua', '').split('#')
     hashed_path = hashlib.sha256(path).hexdigest()
     count = ScrapedLinks.objects.filter(path__iexact=path).count()
 
@@ -640,7 +641,7 @@ def number_save_and_log(phone, city_id, area_id, district_id, city_name, area_na
         MobileNumbers.objects.create(country_code=country_code, city_id=city_id, area_id=area_id, district_id=district_id, number=int(phone), postal_code_id=0)
         self_scrapy_history.numbers_unique += 1
     except Exception as e:
-        self_scrapy_history.numbers_non_matched += 1
+        # self_scrapy_history.numbers_non_matched += 1
         print(e)
         logging.debug(e)
 
