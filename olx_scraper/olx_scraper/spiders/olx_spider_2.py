@@ -115,7 +115,7 @@ def parse_spider():
         task.append((url, key, ))
 
     # pdb.set_trace()
-    pool = multiprocessing.Pool(len(main_urls) * 2)
+    pool = multiprocessing.Pool(len(main_urls))
     async_results = [pool.apply_async(each_category_scrape, t) for t in task]
     pool.close()
     map(multiprocessing.pool.ApplyResult.wait, async_results)
