@@ -149,7 +149,6 @@ def each_category_scrape(category_url, category_index):
     global multi_threads
     global multi_instances
 
-    print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
     scrapy_cycle_history = None
     try:
         scrapy_cycle_history = ScraypingCycleHistory.objects.filter(category_index=category_index).latest()
@@ -165,6 +164,7 @@ def each_category_scrape(category_url, category_index):
     total_cycle_array = []
     self_scrapy_history.numbers_non_matched = 0
 
+    print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
     try:
         while (range_first_value + gear[gear_index]) < 99000000:
             total_count = 0
@@ -194,9 +194,9 @@ def each_category_scrape(category_url, category_index):
                         continue                
 
                     self_scrapy_history.links_found += 1
-                    if check_url_twice(url):
-                        logging.debug("$$$$$$$$$$$$$$ url is twice repeated $$$$$$$$$$$$$$$$$")
-                        continue                
+                    # if check_url_twice(url):
+                    #     logging.debug("$$$$$$$$$$$$$$ url is twice repeated $$$$$$$$$$$$$$$$$")
+                    #     continue
 
                     address = ""
                     phone = ""

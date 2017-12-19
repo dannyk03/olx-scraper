@@ -94,7 +94,7 @@ class OlxSpider(scrapy.Spider):
     def parse(self, response):
         self.website = ClassifiedWebsites.objects.filter(domain=self.domain).first()        
         self.proxies = self.get_or_create_proxies_for_website(self.website)        
-        self.sleep_time = 7.5;
+        self.sleep_time = 7.5
         self.scrapy_history = ScrapingHistory.objects.create(scraper=self.domain, links_found=0, links_unique=0, numbers_found=0, numbers_unique=0, numbers_non_matched=0, active_proxies=[], sleep_time=self.sleep_time)
         for i in range(0, 24):
             self.scrapy_history.active_proxies.append(len(self.proxies))
