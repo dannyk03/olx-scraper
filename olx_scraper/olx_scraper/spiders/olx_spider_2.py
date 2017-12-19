@@ -45,15 +45,15 @@ from product.views import *
 main_urls = [
     'https://www.olx.ua/detskiy-mir/?search%5Bprivate_business%5D=private',
     'https://www.olx.ua/nedvizhimost/?search%5Bprivate_business%5D=private',
-    # 'https://www.olx.ua/transport/?search%5Bprivate_business%5D=private',
-    # 'https://www.olx.ua/zhivotnye/?search%5Bprivate_business%5D=private',
-    # 'https://www.olx.ua/dom-i-sad/?search%5Bprivate_business%5D=private',
-    # 'https://www.olx.ua/elektronika/?search%5Bprivate_business%5D=private',
-    # 'https://www.olx.ua/uslugi/?search%5Bprivate_business%5D=private',
-    # 'https://www.olx.ua/moda-i-stil/?search%5Bprivate_business%5D=private',
-    # 'https://www.olx.ua/hobbi-otdyh-i-sport/?search%5Bprivate_business%5D=private',
-    # 'https://www.olx.ua/otdam-darom/?search%5Bfilter_float_price%3Afrom%5D=free&search%5Bprivate_business%5D=private',
-    # 'https://www.olx.ua/obmen-barter/?search%5Bfilter_float_price%3Afrom%5D=exchange&search%5Bprivate_business%5D=private'
+    'https://www.olx.ua/transport/?search%5Bprivate_business%5D=private',
+    'https://www.olx.ua/zhivotnye/?search%5Bprivate_business%5D=private',
+    'https://www.olx.ua/dom-i-sad/?search%5Bprivate_business%5D=private',
+    'https://www.olx.ua/elektronika/?search%5Bprivate_business%5D=private',
+    'https://www.olx.ua/uslugi/?search%5Bprivate_business%5D=private',
+    'https://www.olx.ua/moda-i-stil/?search%5Bprivate_business%5D=private',
+    'https://www.olx.ua/hobbi-otdyh-i-sport/?search%5Bprivate_business%5D=private',
+    'https://www.olx.ua/otdam-darom/?search%5Bfilter_float_price%3Afrom%5D=free&search%5Bprivate_business%5D=private',
+    'https://www.olx.ua/obmen-barter/?search%5Bfilter_float_price%3Afrom%5D=exchange&search%5Bprivate_business%5D=private'
 ]
 
 domain = "olx.ua"
@@ -114,20 +114,21 @@ def parse_spider():
     for key, url in enumerate(main_urls):
         task.append((url, key, ))
 
-    # pool = multiprocessing.Pool(len(main_urls))
-    # async_results = [pool.apply_async(self.each_category_scrape, t) for t in task]
-    # pool.close()
-    # map(multiprocessing.pool.ApplyResult.wait, async_results)
+    # pdb.set_trace()
+    pool = multiprocessing.Pool(len(main_urls) * 2)
+    async_results = [pool.apply_async(each_category_scrape, t) for t in task]
+    pool.close()
+    map(multiprocessing.pool.ApplyResult.wait, async_results)
 
     # pool.map(each_category_scrape, task)
 
     # for t in task:
     #     self.multi_threads.append(pool.apply_async(self.each_category_scrape, t))
     
-    for key, url in enumerate(main_urls):
-        _thread = MyThread(name='category '+str(key+1), target=each_category_scrape, args=[url,key,])
-        _thread.start()
-        multi_threads.append(_thread)
+    # for key, url in enumerate(main_urls):
+    #     _thread = MyThread(name='category '+str(key+1), target=each_category_scrape, args=[url,key,])
+    #     _thread.start()
+    #     multi_threads.append(_thread)
 
     signal.signal(signal.SIGINT, kill_threads)
     signal.pause()
@@ -338,7 +339,7 @@ def setup_proxy_check_xpath(url, xpath_string, category_index, isPhone=False):
     content = None
     while True:
         iterator_in_one_cycle = (self_iterator_in_one_cycle + 1) % len(multi_instances)
-        self_iterator_in_one_cycle = iterator_in_one_cycle + 1
+        self_iterator_in_one_cycle = iterator_in_one_cycle
         try:
             multi_instances[iterator_in_one_cycle].get(url)
         except httplib.BadStatusLine as bsl:
