@@ -267,6 +267,7 @@ class OlxSpider(scrapy.Spider):
                 range_first_value = range_first_value + self.gear[gear_index] + 1
 
         except Exception as err:
+            print("###################### restart #######################")
             print(err)
             logging.debug(err)
             time.sleep(60)
@@ -282,8 +283,6 @@ class OlxSpider(scrapy.Spider):
         Create the headless browser with given proxy list
     """
     def create_instances(self):
-        del self.multi_instances[:]
-
         for _proxy in self.proxies:
             proxy = _proxy.proxy
             service_args=[]
@@ -315,30 +314,38 @@ class OlxSpider(scrapy.Spider):
         content = None
         while True:
             iterator_in_one_cycle = (self.iterator_in_one_cycle + 1) % len(self.multi_instances)
-            self.iterator_in_one_cycle = iterator_in_one_cycle + 1
+            print("############# cycle proxy number $##################")
+            print(self.iterator_in_one_cycle)
+            print(iterator_in_one_cycle)
+            self.iterator_in_one_cycle = iterator_in_one_cycle
             try:
                 self.multi_instances[iterator_in_one_cycle].get(url)
             except httplib.BadStatusLine as bsl:
+                print("@@@@@@@@@@@@@@@ bad ######################")
                 print(bsl)
                 logging.debug(bsl)
                 self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 continue
             except TimeoutException as e:
+                print("@@@@@@@@@@@@@@@ time ######################")
                 print(e)
                 logging.debug(e)
                 self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 continue
             except WebDriverException as e:
+                print("@@@@@@@@@@@@@@@ web ######################")
                 self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 print(e)
                 logging.debug(e)
                 continue
             except KeyboardInterrupt as e:
+                print("@@@@@@@@@@@@@@@ key ######################")
                 print(e)
                 logging.debug(e)
                 self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 continue            
             except Exception as e:
+                print("@@@@@@@@@@@@@@@ exp ######################")
                 self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 print(str(e))
                 logging.debug(e)
@@ -515,6 +522,7 @@ class OlxSpider(scrapy.Spider):
                 
                 ClassifiedWebsitesProxies.objects.create(classified=website, proxy=proxy, suspended_level=0, status='online')
             except Exception as ex:
+                print("################# get create proxy ################")
                 print(ex)
                 logging.debug(ex)
 
