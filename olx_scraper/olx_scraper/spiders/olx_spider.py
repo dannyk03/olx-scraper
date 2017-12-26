@@ -106,21 +106,6 @@ class OlxSpider(scrapy.Spider):
 
         self.create_instances()
 
-        task = []
-
-        for key, url in enumerate(self.url):
-            task.append((url, key, ))
-
-        # pool = multiprocessing.Pool(len(self.url))
-        # async_results = [pool.apply_async(self.each_category_scrape, t) for t in task]
-        # pool.close()
-        # map(multiprocessing.pool.ApplyResult.wait, async_results)
-
-        # pool.map(process_scrape, zip([self]*len(task), task))
-
-        # for t in task:
-        #     self.multi_threads.append(pool.apply_async(self.each_category_scrape, t))
-        
         for key, url in enumerate(self.url):
             _thread = MyThread(name='category '+str(key+1), target=self.each_category_scrape, args=[url,key,])
             _thread.start()
@@ -329,31 +314,31 @@ class OlxSpider(scrapy.Spider):
             try:
                 self.multi_instances[iterator_in_one_cycle].get(url)
             except httplib.BadStatusLine as bsl:
-                print("@@@@@@@@@@@@@@@ bad ######################")
+                logging.debug("@@@@@@@@@@@@@@@ bad ######################")
                 print(bsl)
                 logging.debug(bsl)
                 self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 continue
             except TimeoutException as e:
-                print("@@@@@@@@@@@@@@@ time ######################")
+                logging.debug("@@@@@@@@@@@@@@@ time ######################")
                 print(e)
                 logging.debug(e)
                 self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 continue
             except WebDriverException as e:
-                print("@@@@@@@@@@@@@@@ web ######################")
+                logging.debug("@@@@@@@@@@@@@@@ web ######################")
                 self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 print(e)
                 logging.debug(e)
                 continue
             except KeyboardInterrupt as e:
-                print("@@@@@@@@@@@@@@@ key ######################")
+                logging.debug("@@@@@@@@@@@@@@@ key ######################")
                 print(e)
                 logging.debug(e)
                 self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 continue            
             except Exception as e:
-                print("@@@@@@@@@@@@@@@ exp ######################")
+                logging.debug("@@@@@@@@@@@@@@@ exp ######################")
                 self.update_or_remove_proxy(self.proxies[iterator_in_one_cycle])
                 print(str(e))
                 logging.debug(e)
