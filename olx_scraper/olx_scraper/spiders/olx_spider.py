@@ -16,6 +16,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from selenium.webdriver.common.proxy import Proxy, ProxyType
 
 from lxml import etree
 from scrapy.utils.log import configure_logging  
@@ -286,13 +287,20 @@ class OlxSpider(scrapy.Spider):
         for _proxy in self.proxies:
             proxy = _proxy.proxy
             service_args=[]
-            service_args.append('--proxy={}:{}'.format(proxy.ip, proxy.port))
+            # service_args.append('--proxy={}:{}'.format(proxy.ip, proxy.port))
 
             if proxy.username and proxy.password:
                 service_args.append('--proxy-auth={}:{}'.format(proxy.username, proxy.password))
 
             capabilities = DesiredCapabilities.PHANTOMJS
             capabilities['phantomjs.page.settings.resourceTimeout'] = self.max_delay_limit * 1000
+
+            _proxy_ = Proxy()
+            _proxy_.proxy_type = ProxyType.MANUAL
+            _proxy_.http_proxy = '{}:{}'.format(proxy.ip, proxy.port)
+            _proxy_.socks_proxy = '{}:{}'.format(proxy.ip, proxy.port)
+            _proxy_.ssl_proxy = '{}:{}'.format(proxy.ip, proxy.port)
+            _proxy_.add_to_capabilities(capabilities)
 
             driver = webdriver.PhantomJS(service_args=service_args,
                                     desired_capabilities=capabilities,
